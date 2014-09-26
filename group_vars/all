@@ -1,0 +1,5 @@
+# Variables listed here are applicable to all host groups
+
+zabbix_server: 110.50.240.158
+zabbix_hostname: china_proxy
+dbpass: HogeHoge123

@@ -1,0 +1,49 @@
+- hosts: 54.64.124.105
+  remote_user: ec2-user
+  sudo: yes
+  tasks:
+
+  - name: ensure mysql is running and enabled
+    yum: pkg=mysql-server state=installed
+
+  - name: repo_regist
+    command: rpm -ivh http://repo.zabbix.com/zabbix/2.2/rhel/6/x86_64/zabbix-release-2.2-1.el6.noarch.rpm
+
+  - name: ensure zabbix is at the latest version
+    command: yum install -y zabbix zabbix-proxy zabbix-proxy-mysql
+
+  - name: repo_disable
+    lineinfile: dest=/etc/yum.repos.d/zabbix.repo regexp=^enable line=enable=1
+
+  - name: "rename my.cnf"
+    command: mv /etc/my.cnf /etc/my.cnf.org
+
+  - name: "conf_cp"
+    template: src=/tmp/my.txt dest=/etc/my.cnf owner=root group=root mode=644
+
+  - name: ensure mysqld is running and enabled
+    service: name=mysqld state=started enabled=yes
+
+  - name: python mysql install
+    command: yum install -y MySQL-python
+
+  - name: create database
+    mysql_db: name=zabbix state=present encoding=utf8
+
+  - name: create database user
+    mysql_user: name=zabbix password={{ dbpass }} priv=zabbix.*:ALL state=present
+
+  - name: set config server 
+    lineinfile: dest=/etc/zabbix/zabbix_proxy.conf regexp="^Server=.*" insertafter="^# Server=" line=Server={{ zabbix_server }}
+
+  - name: set config hostname 
+    lineinfile: dest=/etc/zabbix/zabbix_proxy.conf regexp="^Hostname=.*" insertafter="^# Hostname=" line=Server={{ zabbix_hostname }}
+
+  - name: set config DBpass
+    lineinfile: dest=/etc/zabbix/zabbix_proxy.conf regexp='^# DBPassword='  line=DBPassword={{ dbpass }}
+
+  - name: set config DBpass
+    lineinfile: dest=/etc/zabbix/zabbix_proxy.conf regexp='^DBName='  insertafter="^# DBName=" line=DBName=zabbix
+
+  - name: ensure zabbix-proxy is running and enabled
+    service: name=zabbix-proxy state=started enabled=yes
